@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tanamanku - Manajemen Tanaman & Grafik</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(145deg, #c8e0b0 0%, #a8c994 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+            position: relative;
+        }
+        /* Background pattern untuk setiap halaman */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle at 10% 20%, rgba(60, 80, 40, 0.08) 2%, transparent 2.5%),
+                              repeating-linear-gradient(45deg, rgba(70, 100, 50, 0.03) 0px, rgba(70, 100, 50, 0.03) 2px, transparent 2px, transparent 8px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body.dark-mode {
+            background: linear-gradient(145deg, #1a2a1a, #0f1a0f);
+        }
+        body.dark-mode::before {
+            background-image: radial-gradient(circle at 10% 20%, rgba(200, 220, 150, 0.1) 2%, transparent 2.5%),
+                              repeating-linear-gradient(45deg, rgba(150, 180, 100, 0.08) 0px, rgba(150, 180, 100, 0.08) 2px, transparent 2px, transparent 8px);
+        }
+        body.dark-mode .app-container {
+            background: #1e2a1a;
+            color: #e0e0e0;
+        }
+        body.dark-mode .plant-card, body.dark-mode .catatan-list, body.dark-mode .btn-secondary, body.dark-mode .photo-placeholder {
+            background: #2a3725;
+            border-color: #4a5a40;
+        }
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 10%, #f9e45b, #ffb347, #4caf50);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: opacity 0.8s ease;
+            opacity: 1;
+        }
+        .intro-video-container {
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .intro-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 3.8rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff, #ffefb0, #ffd966);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            animation: titleGlow 1s ease infinite alternate;
+        }
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 5px gold; }
+            to { text-shadow: 0 0 25px orange; }
+        }
+        .intro-canvas {
+            width: 320px;
+            height: 320px;
+            border-radius: 60px;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.4);
+            border: 5px solid rgba(255,235,150,0.9);
+            background: #2c5e2e;
+        }
+        .fade-out-intro { opacity: 0; pointer-events: none; }
+        .app-container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(254, 250, 240, 0.96);
+            backdrop-filter: blur(4px);
+            border-radius: 48px 48px 40px 40px;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.35);
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+        /* Background khusus tiap halaman (overlay subtle) */
+        .page {
+            background: rgba(255, 253, 245, 0.7);
+            backdrop-filter: blur(2px);
+            border-radius: 32px;
+            margin: 8px;
+            transition: all 0.2s;
+        }
+        body.dark-mode .page {
+            background: rgba(30, 42, 26, 0.8);
+        }
+        .app-header {
+            background: #2c5e2e;
+            padding: 20px 24px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .header-actions { display: flex; gap: 12px; }
+        .music-btn, .dark-toggle {
+            background: rgba(255,255,200,0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .music-btn.playing { animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .bottom-nav {
+            background: rgba(255,255,245,0.96);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 20px 22px;
+            border-top: 1px solid #e2e0cf;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6b6a5c;
+            cursor: pointer;
+            background: none;
+            border: none;
+            transition: all 0.2s;
+        }
+        .nav-item i { font-size: 24px; transition: transform 0.2s; }
+        .nav-item:hover i { transform: translateY(-4px); }
+        .nav-item.active { color: #2c5e2e; transform: translateY(-3px); }
+        .page { display: none; padding: 24px 20px; animation: fadeSlideIn 0.4s; }
+        .page.active-page { display: block; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .plant-card {
+            background: white;
+            border-radius: 28px;
+            padding: 14px 18px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.25s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .plant-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); }
+        .plant-info { display: flex; align-items: center; gap: 12px; flex:1; }
+        .plant-avatar { width: 50px; height: 50px; border-radius: 30px; object-fit: cover; }
+        .btn-catat { background: #e8f0e4; border: none; padding: 8px 14px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-catat:hover { background: #2c5e2e; color: white; }
+        .btn-primary { background: #2c5e2e; border: none; padding: 14px; border-radius: 44px; font-weight: 700; color: white; width: 100%; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-primary:hover { background: #1e451f; transform: translateY(-2px); }
+        .btn-secondary { background: #f0ede3; border: none; padding: 10px; border-radius: 44px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-danger { background: #c0392b; color: white; padding: 14px; border-radius: 60px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; }
+        input, select, textarea { width: 100%; padding: 12px 16px; border-radius: 28px; border: 1px solid #ddd6c8; transition: 0.2s; background: rgba(255,255,245,0.9); }
+        input:focus { outline: none; border-color: #2c5e2e; box-shadow: 0 0 0 3px rgba(44,94,46,0.2); }
+        .photo-placeholder { background: #f2efe6; border-radius: 32px; padding: 20px; text-align: center; border: 2px dashed #c0bcab; cursor: pointer; }
+        .catatan-list { background: #f9f6ed; border-radius: 24px; padding: 12px; margin-top: 16px; }
+        canvas { max-height: 220px; margin: 16px 0; background: rgba(255,255,240,0.8); border-radius: 24px; padding: 8px; }
+        .charts-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin: 20px 0;
+        }
+        .chart-card {
+            background: rgba(255,255,245,0.85);
+            border-radius: 28px;
+            padding: 12px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.05);
+        }
+        .chart-card h4 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #2c5e2e;
+        }
+        .alarm-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:2000; display:flex; align-items:center; justify-content:center; }
+        .alarm-card { background: white; border-radius: 48px; padding: 24px; text-align: center; max-width: 340px; animation: shake 0.3s; }
+        @keyframes shake { 0%,100%{ transform: translateX(0); } 25%{ transform: translateX(-8px); } 75%{ transform: translateX(8px); } }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; font-weight: 600; margin-bottom: 20px; color: #2c5e2e; cursor: pointer; transition: gap 0.2s; }
+        .back-link:hover { gap: 12px; }
+        .filter-sort { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+        .search-bar { margin: 12px 0; }
+        .jadwal-options label { margin-right: 12px; display: inline-flex; align-items: center; gap: 6px; }
+        #plantChecklistJadwal label { display: block; margin: 6px 0; }
+        .catatan-item { padding: 10px; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+<div id="introOverlay" class="intro-overlay">
+    <div class="intro-video-container">
+        <div class="intro-title">🌿 TANAMANKU 🌿</div>
+        <canvas id="introCanvas" class="intro-canvas" width="400" height="400"></canvas>
+        <div style="margin-top: 20px; color: white; font-weight: bold; text-shadow: 2px 2px 4px black;">🌱 Kelola Tanaman & Pantau Grafik 🌱</div>
+    </div>
+</div>
+
+<div class="app-container" id="app" style="opacity:0;">
+    <div class="app-header">
+        <h1 style="font-size:22px;"><i class="fas fa-seedling"></i> Tanamanku</h1>
+        <div class="header-actions">
+            <button id="musicToggleBtn" class="music-btn"><i class="fas fa-music"></i></button>
+            <button id="darkModeToggle" class="dark-toggle"><i class="fas fa-moon"></i></button>
+        </div>
+        <span id="bellStatus" style="font-size:12px; background:#ffb34740; padding:4px 10px; border-radius:30px;"><i class="fas fa-bell"></i> Alarm Siap</span>
+    </div>
+
+    <div id="homePage" class="page active-page">
+        <button id="tambahBaruBtnHome" class="btn-primary"><i class="fas fa-plus-circle"></i> + Tanaman Baru</button>
+        <div class="search-bar"><input type="text" id="searchInput" placeholder="Cari tanaman..."></div>
+        <div class="filter-sort">
+            <select id="filterJenis"><option value="">Semua Jenis</option><option>Sayur</option><option>Buah</option><option>Hias</option></select>
+            <select id="sortBy"><option value="name">Nama A-Z</option><option value="date">Tanggal Tanam</option></select>
+            <button id="resetFilterBtn" class="btn-secondary" style="width:auto;">Reset</button>
+        </div>
+        <div id="plantListContainer"></div>
+        
+        <!-- BANYAK GRAFIK: 3 grafik berbeda -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h4><i class="fas fa-chart-line"></i> Tren Catatan Harian</h4>
+                <canvas id="growthChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4><i class="fas fa-chart-pie"></i> Komposisi Jenis Tanaman</h4>
+                <canvas id="jenisChart" style="max-height: 200px;"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4><i class="fas fa-chart-bar"></i> Ringkasan Kondisi Tanaman</h4>
+                <canvas id="kondisiChart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+        
+        <div><h3><i class="fas fa-calendar-check"></i> Jadwal Aktif</h3><div id="jadwalPreviewHome" class="catatan-list"></div></div>
+    </div>
+
+    <div id="tambahPage" class="page">
+        <button class="back-link" id="backHomeFromTambah"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <h2>Tambah Tanaman</h2>
+        <div class="photo-placeholder" id="fotoTrigger">
+            <i class="fas fa-camera"></i><p>Upload Foto</p>
+            <input type="file" id="fotoTanamanInput" accept="image/*" style="display:none;">
+            <img id="previewFotoTambah" style="width:100%; max-height:150px; object-fit:cover; border-radius:28px; display:none;">
+        </div>
+        <div class="form-group"><label>Nama Tanaman *</label><input type="text" id="namaTanamanInput" placeholder="Contoh: Padi"></div>
+        <div class="form-group"><label>Jenis</label><select id="jenisTanamanSelect"><option>Sayur</option><option>Buah</option><option>Hias</option></select></div>
+        <div class="form-group"><label>Tanggal Tanam</label><input type="date" id="tanggalTanamInput"></div>
+        <div class="form-group"><label>Lokasi</label><input type="text" id="lokasiInput"></div>
+        <button id="simpanTanamanBtn" class="btn-primary">SIMPAN</button>
+    </div>
+
+    <div id="detailPage" class="page">
+        <button class="back-link" id="backHomeFromDetail"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <div id="detailContent"></div>
+        <button id="hapusTanamanBtnDetail" class="btn-danger" style="display:none;"><i class="fas fa-trash-alt"></i> Hapus Tanaman</button>
+    </div>
+
+    <div id="riwayatPage" class="page">
+        <button class="back-link" id="backHomeFromRiwayat"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <h2>Riwayat Catatan</h2>
+        <div id="allNotesContainer"></div>
+        <button id="exportCatatanBtn" class="btn-secondary">Ekspor Catatan CSV</button>
+        <button id="exportDataLengkapBtn" class="btn-secondary">Ekspor Semua Data</button>
+    </div>
+
+    <div id="jadwalPage" class="page">
+        <button class="back-link" id="backHomeFromJadwal"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <h2>Atur Alarm Perawatan</h2>
+        <div class="form-group"><label>Aktivitas:</label><div class="jadwal-options" id="aktivitasCheckbox"></div></div>
+        <div class="form-group"><label>Frekuensi</label><select id="frekuensiSelect"><option>Setiap hari</option><option>2 hari sekali</option><option>3 hari sekali</option><option>Setiap minggu</option></select></div>
+        <div class="form-group"><label>Jam Alarm</label><input type="time" id="waktuPengingat" value="08:35"></div>
+        <div class="form-group"><label>Tanaman:</label><div id="plantChecklistJadwal"></div></div>
+        <button id="simpanJadwalBtn" class="btn-primary">SIMPAN JADWAL</button>
+        <div id="jadwalTampilan" class="catatan-list"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item" data-nav="home"><i class="fas fa-leaf"></i><span>Beranda</span></button>
+        <button class="nav-item" data-nav="jadwal"><i class="fas fa-bell"></i><span>Alarm</span></button>
+        <button class="nav-item" data-nav="riwayat"><i class="fas fa-book-open"></i><span>Riwayat</span></button>
+    </div>
+</div>
+
+<script>
+    // ---------- DATA ----------
+    let plants = [];
+    let growthRecords = [];
+    let schedule = { activities: [], frequency: "Setiap hari", time: "08:35", plantIds: [] };
+    
+    let alarmInterval = null, alarmTimeout = null, isAlarmActive = false, audioCtx = null;
+    let snoozeTimeout = null;
+    let growthChart = null, jenisChart = null, kondisiChart = null;
+    
+    // ---------- MUSIK JAWA (Intro) ----------
+    let introMusicCtx = null;
+    let introMusicInterval = null;
+    let isIntroMusicPlaying = false;
+    
+    function playSuweOraJamu() {
+        if (!introMusicCtx) introMusicCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (introMusicCtx.state === 'suspended') introMusicCtx.resume();
+        const now = introMusicCtx.currentTime;
+        const notes = [392, 440, 392, 330, 392, 440, 392, 294, 330, 392, 330, 294, 262, 294, 330, 294, 262];
+        const durations = [0.4, 0.4, 0.4, 0.6, 0.4, 0.4, 0.4, 0.6, 0.4, 0.4, 0.4, 0.4, 0.6, 0.4, 0.4, 0.4, 0.8];
+        let time = now;
+        notes.forEach((freq, idx) => {
+            const osc = introMusicCtx.createOscillator();
+            const gain = introMusicCtx.createGain();
+            osc.connect(gain);
+            gain.connect(introMusicCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.2, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + durations[idx]);
+            osc.start(time);
+            osc.stop(time + durations[idx]);
+            time += durations[idx];
+        });
+        setTimeout(() => {
+            if (!isIntroMusicPlaying) return;
+            const oscGong = introMusicCtx.createOscillator();
+            const gainGong = introMusicCtx.createGain();
+            oscGong.connect(gainGong);
+            gainGong.connect(introMusicCtx.destination);
+            oscGong.type = 'triangle';
+            oscGong.frequency.value = 196;
+            gainGong.gain.setValueAtTime(0.15, introMusicCtx.currentTime);
+            gainGong.gain.exponentialRampToValueAtTime(0.0001, introMusicCtx.currentTime + 1.5);
+            oscGong.start();
+            oscGong.stop(introMusicCtx.currentTime + 1.5);
+        }, 1800);
+    }
+    
+    function startIntroMusicLoop() {
+        if (introMusicInterval) clearInterval(introMusicInterval);
+        playSuweOraJamu();
+        introMusicInterval = setInterval(() => { if (isIntroMusicPlaying) playSuweOraJamu(); }, 5500);
+    }
+    
+    function stopIntroMusic() {
+        if (introMusicInterval) clearInterval(introMusicInterval);
+        introMusicInterval = null;
+        if (introMusicCtx) introMusicCtx.close().then(() => { introMusicCtx = null; });
+        isIntroMusicPlaying = false;
+    }
+    
+    // ---------- ALARM ----------
+    function playKringSound() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.85;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+        osc.stop(now + 0.65);
+        setTimeout(() => {
+            if (!isAlarmActive) return;
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.frequency.value = 660;
+            gain2.gain.value = 0.8;
+            osc2.start();
+            gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+            osc2.stop(audioCtx.currentTime + 0.5);
+        }, 200);
+    }
+    
+    function startAlarmLoop() {
+        if (alarmInterval) clearInterval(alarmInterval);
+        alarmInterval = setInterval(() => { if (isAlarmActive) playKringSound(); }, 900);
+        playKringSound();
+    }
+    
+    function stopAlarmAndClear() {
+        if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+        if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
+        if (snoozeTimeout) { clearTimeout(snoozeTimeout); snoozeTimeout = null; }
+        isAlarmActive = false;
+        const overlay = document.getElementById('alarmDynamicOverlay');
+        if (overlay) overlay.remove();
+        document.getElementById('bellStatus').innerHTML = '<i class="fas fa-bell"></i> Alarm Siap';
+    }
+    
+    function showAlarmUI(message, timeStr, onSnooze) {
+        if (!isAlarmActive) return;
+        const old = document.getElementById('alarmDynamicOverlay');
+        if(old) old.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'alarmDynamicOverlay';
+        overlay.className = 'alarm-overlay';
+        overlay.innerHTML = `
+            <div class="alarm-card">
+                <div class="alarm-icon"><i class="fas fa-bell"></i></div>
+                <div class="alarm-title">⚠️ PERAWATAN ⚠️</div>
+                <div class="alarm-message">${message}</div>
+                <div class="alarm-time">${timeStr}</div>
+                <button id="btnStopAlarmNow" style="background:#2c5e2e; padding:12px; border-radius:40px; width:100%; margin-top:8px;">MATIKAN</button>
+                <button id="btnSnoozeAlarm" style="background:#f39c12; padding:12px; border-radius:40px; width:100%; margin-top:12px;">TUNDA 10 MENIT</button>
+            </div>`;
+        document.body.appendChild(overlay);
+        document.getElementById('btnStopAlarmNow')?.addEventListener('click', () => stopAlarmAndClear());
+        document.getElementById('btnSnoozeAlarm')?.addEventListener('click', () => { if(onSnooze) onSnooze(); });
+        if (navigator.vibrate) navigator.vibrate([200,100,200]);
+        if (Notification.permission === "granted") new Notification("Tanamanku", { body: message });
+        else if (Notification.permission !== "denied") Notification.requestPermission();
+    }
+    
+    function triggerAlarm() {
+        if (isAlarmActive) return;
+        if (!schedule.activities.length || !schedule.plantIds.length) return;
+        const plantNames = schedule.plantIds.map(id => plants.find(p => p.id === id)?.name).filter(n => n).join(", ");
+        const message = `🌱 Waktunya ${schedule.activities.join(", ")} untuk ${plantNames || "tanaman"}!`;
+        isAlarmActive = true;
+        startAlarmLoop();
+        showAlarmUI(message, schedule.time, () => {
+            stopAlarmAndClear();
+            snoozeTimeout = setTimeout(() => triggerAlarm(), 10 * 60 * 1000);
+            alert("Alarm ditunda 10 menit");
+        });
+        alarmTimeout = setTimeout(() => { if (isAlarmActive) stopAlarmAndClear(); }, 120000);
+        localStorage.setItem("lastAlarmDate", new Date().toDateString());
+    }
+    
+    function checkAndTriggerAlarm() {
+        if (isAlarmActive || snoozeTimeout) return;
+        if (!schedule.activities.length || !schedule.plantIds.length) return;
+        const now = new Date();
+        const [schHour, schMinute] = schedule.time.split(":").map(Number);
+        if (now.getHours() !== schHour || now.getMinutes() !== schMinute) return;
+        if (now.getSeconds() > 2) return;
+        const lastDate = localStorage.getItem("lastAlarmDate");
+        const today = now.toDateString();
+        let should = false;
+        if (schedule.frequency === "Setiap hari") should = (lastDate !== today);
+        else if (schedule.frequency === "2 hari sekali") should = (!lastDate || Math.floor((now - new Date(lastDate)) / 86400000) >= 2);
+        else if (schedule.frequency === "3 hari sekali") should = (!lastDate || Math.floor((now - new Date(lastDate)) / 86400000) >= 3);
+        else if (schedule.frequency === "Setiap minggu") should = (!lastDate || Math.floor((now - new Date(lastDate)) / 86400000) >= 7);
+        if (should) triggerAlarm();
+    }
+    setInterval(checkAndTriggerAlarm, 1000);
+    
+    // ---------- STORAGE ----------
+    function loadData() {
+        plants = JSON.parse(localStorage.getItem("tanamanKu_plants") || "[]");
+        growthRecords = JSON.parse(localStorage.getItem("tanamanKu_records") || "[]");
+        const s = localStorage.getItem("tanamanKu_schedule");
+        if(s) schedule = JSON.parse(s);
+        if(!schedule.time) schedule.time = "08:35";
+        if(!schedule.activities) schedule.activities = [];
+        if(!schedule.plantIds) schedule.plantIds = [];
+        if(plants.length === 0) {
+            plants.push({ id: "p1", name: "Cabe Merah", category: "Sayur", plantDate: "2026-10-01", location: "Pot", photo: "" });
+            plants.push({ id: "p2", name: "Mangga", category: "Buah", plantDate: "2026-09-15", location: "Lahan", photo: "" });
+            growthRecords.push({ id: "r1", plantId: "p1", date: "2026-10-20", condition: "Sehat", note: "daun lebat" });
+            growthRecords.push({ id: "r2", plantId: "p2", date: "2026-10-18", condition: "Hama", note: "ada ulat" });
+            saveAll();
+        }
+    }
+    function saveAll() {
+        localStorage.setItem("tanamanKu_plants", JSON.stringify(plants));
+        localStorage.setItem("tanamanKu_records", JSON.stringify(growthRecords));
+        localStorage.setItem("tanamanKu_schedule", JSON.stringify(schedule));
+    }
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    
+    // UPDATE SEMUA GRAFIK
+    function updateAllCharts() {
+        // 1. Line chart catatan per hari (growthChart)
+        const ctxLine = document.getElementById('growthChart').getContext('2d');
+        const last7days = [];
+        for(let i=6;i>=0;i--) { let d = new Date(); d.setDate(d.getDate()-i); last7days.push(d.toISOString().slice(0,10)); }
+        const counts = last7days.map(day => growthRecords.filter(r => r.date === day).length);
+        if(growthChart) growthChart.destroy();
+        growthChart = new Chart(ctxLine, {
+            type: 'line',
+            data: { labels: last7days, datasets: [{ label: 'Jumlah Catatan', data: counts, borderColor: '#2c5e2e', tension: 0.2, fill: false, pointBackgroundColor: '#f4a261' }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // 2. Pie chart jenis tanaman
+        const jenisCount = { Sayur:0, Buah:0, Hias:0 };
+        plants.forEach(p => { if(jenisCount[p.category] !== undefined) jenisCount[p.category]++; else jenisCount[p.category]=1; });
+        const ctxPie = document.getElementById('jenisChart').getContext('2d');
+        if(jenisChart) jenisChart.destroy();
+        jenisChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: { labels: Object.keys(jenisCount), datasets: [{ data: Object.values(jenisCount), backgroundColor: ['#4caf50','#ffb74d','#ba68c8'] }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+        
+        // 3. Bar chart kondisi catatan (Sehat, Layu, Hama)
+        const kondisiMap = { Sehat:0, Layu:0, Hama:0 };
+        growthRecords.forEach(r => { if(kondisiMap[r.condition] !== undefined) kondisiMap[r.condition]++; else kondisiMap[r.condition]=1; });
+        const ctxBar = document.getElementById('kondisiChart').getContext('2d');
+        if(kondisiChart) kondisiChart.destroy();
+        kondisiChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: { labels: Object.keys(kondisiMap), datasets: [{ label: 'Jumlah Catatan', data: Object.values(kondisiMap), backgroundColor: '#66bb6a' }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true, precision:0 } } }
+        });
+    }
+    
+    function renderHome() {
+        let filtered = [...plants];
+        const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+        const jenis = document.getElementById("filterJenis")?.value || "";
+        if(search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+        if(jenis) filtered = filtered.filter(p => p.category === jenis);
+        const sortBy = document.getElementById("sortBy")?.value || "name";
+        if(sortBy === "name") filtered.sort((a,b)=> a.name.localeCompare(b.name));
+        if(sortBy === "date") filtered.sort((a,b)=> (b.plantDate||"").localeCompare(a.plantDate||""));
+        const container = document.getElementById("plantListContainer");
+        if(filtered.length===0) container.innerHTML = "<div style='padding:20px; text-align:center'>🌱 Tidak ada tanaman</div>";
+        else {
+            container.innerHTML = filtered.map(plant => `
+                <div class="plant-card">
+                    <div class="plant-info">
+                        ${plant.photo ? `<img src="${plant.photo}" class="plant-avatar" onerror="this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23a5c882%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22middle%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-size%3D%2240%22%3E🌿%3C%2Ftext%3E%3C%2Fsvg%3E'">` : `<div class="plant-avatar" style="background:#c8d9b0; display:flex; align-items:center; justify-content:center; font-size:28px;">🌱</div>`}
+                        <div><h3>${escapeHtml(plant.name)}</h3><p>${plant.category}</p></div>
+                    </div>
+                    <button class="btn-catat" data-id="${plant.id}"><i class="fas fa-pen-fancy"></i> Catat</button>
+                </div>`).join('');
+            document.querySelectorAll('.btn-catat').forEach(btn => btn.addEventListener('click', (e) => openDetailPage(btn.dataset.id)));
+        }
+        const jadwalPreview = document.getElementById("jadwalPreviewHome");
+        if(schedule.activities.length && schedule.plantIds.length) {
+            let plantN = schedule.plantIds.map(id=>plants.find(p=>p.id===id)?.name).join(", ");
+            jadwalPreview.innerHTML = `<div><i class="fas fa-bell"></i> ${schedule.activities.join(", ")} • ${schedule.frequency} • ${schedule.time}<br>🌿 ${plantN}</div>`;
+        } else jadwalPreview.innerHTML = "<div>Belum atur alarm</div>";
+        updateAllCharts();
+    }
+    
+    function openDetailPage(plantId) {
+        const plant = plants.find(p=>p.id===plantId);
+        if(!plant) return;
+        const detailDiv = document.getElementById("detailContent");
+        const records = growthRecords.filter(r=>r.plantId===plantId);
+        let recHtml = records.map(r=>`<div class="catatan-item">📅 ${r.date}<br>${r.condition}: ${r.note||"-"}</div>`).join('');
+        detailDiv.innerHTML = `
+            <h2>${escapeHtml(plant.name)}</h2>
+            ${plant.photo ? `<img src="${plant.photo}" style="width:100%; border-radius:32px; margin-bottom:16px;">` : `<div style="background:#ddd; border-radius:32px; padding:20px; text-align:center;">Tidak ada foto</div>`}
+            <div class="form-group"><label>Tanggal</label><input type="date" id="catatTanggal" value="${new Date().toISOString().slice(0,10)}"></div>
+            <div class="form-group"><label>Kondisi</label><select id="catatKondisi"><option>Sehat</option><option>Layu</option><option>Hama</option></select></div>
+            <div class="form-group"><label>Catatan</label><textarea id="catatNote"></textarea></div>
+            <button id="simpanCatatanBtnDetail" class="btn-primary">Simpan Catatan</button>
+            <hr><h3>Riwayat</h3>${recHtml || "<em>Belum ada</em>"}`;
+        document.getElementById("simpanCatatanBtnDetail")?.addEventListener("click",()=>{
+            const date = document.getElementById("catatTanggal").value;
+            if(date) growthRecords.push({ id:Date.now().toString(), plantId, date, condition:document.getElementById("catatKondisi").value, note:document.getElementById("catatNote").value });
+            saveAll();
+            openDetailPage(plantId);
+            renderHome();
+        });
+        const hapusBtn = document.getElementById("hapusTanamanBtnDetail");
+        hapusBtn.style.display = "block";
+        hapusBtn.onclick = () => {
+            if(confirm(`Hapus ${plant.name} dan semua catatan?`)) {
+                growthRecords = growthRecords.filter(r=>r.plantId!==plantId);
+                plants = plants.filter(p=>p.id!==plantId);
+                schedule.plantIds = schedule.plantIds.filter(id=>id!==plantId);
+                saveAll();
+                renderHome();
+                showPage("home");
+            }
+        };
+        showPage("detail");
+    }
+    
+    function renderRiwayat() {
+        const container = document.getElementById("allNotesContainer");
+        let all = [...growthRecords].sort((a,b)=>new Date(b.date)-new Date(a.date));
+        container.innerHTML = all.map(r=>`<div class="catatan-item"><strong>${plants.find(p=>p.id===r.plantId)?.name || "?"} • ${r.date}</strong><br>${r.condition}: ${r.note||""}</div>`).join('');
+    }
+    
+    function renderJadwalPage() {
+        const checklistDiv = document.getElementById("plantChecklistJadwal");
+        checklistDiv.innerHTML = plants.map(p => `<label><input type="checkbox" value="${p.id}" class="jadwalPlantCheckbox" ${schedule.plantIds.includes(p.id) ? "checked":""}> ${escapeHtml(p.name)}</label>`).join('');
+        document.getElementById("aktivitasCheckbox").innerHTML = `
+            <label><input type="checkbox" value="Menyiram" ${schedule.activities.includes("Menyiram")?"checked":""}> Menyiram</label>
+            <label><input type="checkbox" value="Pupuk" ${schedule.activities.includes("Pupuk")?"checked":""}> Pupuk</label>
+            <label><input type="checkbox" value="Memangkas" ${schedule.activities.includes("Memangkas")?"checked":""}> Memangkas</label>
+            <label><input type="checkbox" value="Cek Hama" ${schedule.activities.includes("Cek Hama")?"checked":""}> Cek Hama</label>`;
+        document.getElementById("frekuensiSelect").value = schedule.frequency;
+        document.getElementById("waktuPengingat").value = schedule.time;
+        const tampil = document.getElementById("jadwalTampilan");
+        if(schedule.activities.length && schedule.plantIds.length){
+            tampil.innerHTML = `<i class="fas fa-check-circle"></i> Alarm: ${schedule.activities.join(", ")} • ${schedule.frequency} • ${schedule.time}<br>Tanaman: ${schedule.plantIds.map(id=>plants.find(p=>p.id===id)?.name).join(", ")}`;
+        } else tampil.innerHTML = "Belum ada jadwal alarm.";
+    }
+    
+    function exportCatatanCSV() {
+        let csv = [["Tanaman","Tanggal","Kondisi","Catatan"]];
+        growthRecords.forEach(r=>{ let p=plants.find(pl=>pl.id===r.plantId); csv.push([p?.name||"", r.date, r.condition, r.note]); });
+        downloadCSV(csv, "catatan_tanaman.csv");
+    }
+    function exportSemuaData() {
+        let data = [["Tipe","ID","Nama","Jenis","Tanggal Tanam","Lokasi","Foto"]];
+        plants.forEach(p=> data.push(["Tanaman", p.id, p.name, p.category, p.plantDate, p.location, p.photo.substring(0,100)+"..."]));
+        data.push(["Jadwal","","Aktivitas", schedule.activities.join(";"), "Frekuensi", schedule.frequency, "Jam "+schedule.time]);
+        downloadCSV(data, "semua_data_tanaman.csv");
+    }
+    function downloadCSV(rows, filename) {
+        const blob = new Blob([rows.map(row=>row.join(",")).join("\n")], {type:"text/csv"});
+        const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+    }
+    
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active-page'));
+        document.getElementById(pageId+"Page").classList.add('active-page');
+        if(pageId === 'home') renderHome();
+        if(pageId === 'riwayat') renderRiwayat();
+        if(pageId === 'jadwal') renderJadwalPage();
+    }
+    
+    function initDarkMode() {
+        const dark = localStorage.getItem("darkMode") === "true";
+        if(dark) document.body.classList.add("dark-mode");
+        document.getElementById("darkModeToggle")?.addEventListener("click",()=>{
+            document.body.classList.toggle("dark-mode");
+            localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+        });
+    }
+    
+    // Event listeners
+    document.getElementById("tambahBaruBtnHome")?.addEventListener("click",()=>showPage("tambah"));
+    document.getElementById("backHomeFromTambah")?.addEventListener("click",()=>showPage("home"));
+    document.getElementById("backHomeFromDetail")?.addEventListener("click",()=>showPage("home"));
+    document.getElementById("backHomeFromRiwayat")?.addEventListener("click",()=>showPage("home"));
+    document.getElementById("backHomeFromJadwal")?.addEventListener("click",()=>showPage("home"));
+    document.getElementById("exportCatatanBtn")?.addEventListener("click",exportCatatanCSV);
+    document.getElementById("exportDataLengkapBtn")?.addEventListener("click",exportSemuaData);
+    document.getElementById("resetFilterBtn")?.addEventListener("click",()=>{
+        document.getElementById("searchInput").value = "";
+        document.getElementById("filterJenis").value = "";
+        renderHome();
+    });
+    document.getElementById("searchInput")?.addEventListener("input",()=>renderHome());
+    document.getElementById("filterJenis")?.addEventListener("change",()=>renderHome());
+    document.getElementById("sortBy")?.addEventListener("change",()=>renderHome());
+    
+    let currentFoto = "";
+    document.getElementById("fotoTrigger")?.addEventListener("click",()=>document.getElementById("fotoTanamanInput")?.click());
+    document.getElementById("fotoTanamanInput")?.addEventListener("change",(e)=>{
+        const file = e.target.files[0];
+        if(file){
+            const reader = new FileReader();
+            reader.onload = ev => { currentFoto = ev.target.result; document.getElementById("previewFotoTambah").src=currentFoto; document.getElementById("previewFotoTambah").style.display="block"; };
+            reader.readAsDataURL(file);
+        }
+    });
+    document.getElementById("simpanTanamanBtn")?.addEventListener("click",()=>{
+        let name = document.getElementById("namaTanamanInput").value.trim();
+        if(!name) return alert("Nama tanaman wajib diisi!");
+        plants.push({ id:Date.now().toString(), name, category:document.getElementById("jenisTanamanSelect").value, plantDate:document.getElementById("tanggalTanamInput").value, location:document.getElementById("lokasiInput").value, photo:currentFoto });
+        saveAll();
+        currentFoto="";
+        document.getElementById("previewFotoTambah").style.display="none";
+        document.getElementById("namaTanamanInput").value="";
+        renderHome();
+        showPage("home");
+    });
+    document.getElementById("simpanJadwalBtn")?.addEventListener("click",()=>{
+        const acts = Array.from(document.querySelectorAll("#aktivitasCheckbox input:checked")).map(cb=>cb.value);
+        schedule = { activities: acts, frequency: document.getElementById("frekuensiSelect").value, time: document.getElementById("waktuPengingat").value, plantIds: Array.from(document.querySelectorAll(".jadwalPlantCheckbox:checked")).map(cb=>cb.value) };
+        saveAll();
+        renderJadwalPage();
+        renderHome();
+        alert("Jadwal alarm disimpan!");
+    });
+    document.querySelectorAll('.nav-item').forEach(btn=>{
+        btn.addEventListener('click',()=> showPage(btn.getAttribute('data-nav')));
+    });
+    
+    // ---------- INTRO CANVAS (TANAMANKU) ----------
+    function startIntro() {
+        const canvas = document.getElementById('introCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 400; canvas.height = 400;
+        let startTime = performance.now();
+        const duration = 5000;
+        isIntroMusicPlaying = true;
+        startIntroMusicLoop();
+        
+        function drawIntro(now) {
+            let progress = Math.min(1, (now - startTime) / duration);
+            ctx.clearRect(0, 0, 400, 400);
+            const gradSky = ctx.createLinearGradient(0, 0, 0, 200);
+            gradSky.addColorStop(0, '#ffd966');
+            gradSky.addColorStop(0.5, '#ffb347');
+            gradSky.addColorStop(1, '#6ab04c');
+            ctx.fillStyle = gradSky;
+            ctx.fillRect(0, 0, 400, 200);
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(0, 180, 400, 220);
+            for(let i=0;i<8;i++) {
+                ctx.fillStyle = '#8B5A2B';
+                ctx.fillRect(50+i*40, 200, 4, 70);
+                ctx.fillStyle = '#f4c542';
+                ctx.beginPath();
+                ctx.moveTo(52+i*40, 190);
+                ctx.lineTo(48+i*40, 205);
+                ctx.lineTo(56+i*40, 205);
+                ctx.fill();
+            }
+            ctx.fillStyle = '#5d8c48';
+            ctx.beginPath();
+            ctx.moveTo(0, 180);
+            ctx.lineTo(80, 120);
+            ctx.lineTo(160, 170);
+            ctx.lineTo(250, 100);
+            ctx.lineTo(350, 150);
+            ctx.lineTo(400, 120);
+            ctx.lineTo(400, 180);
+            ctx.fill();
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(320, 60, 35, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#b5651d';
+            ctx.font = "bold 28px Inter";
+            ctx.fillText("☀️", 305, 80);
+            ctx.fillStyle = '#3e2723';
+            let birdX = (now * 0.08) % 450 - 50;
+            ctx.beginPath(); ctx.moveTo(birdX, 90); ctx.quadraticCurveTo(birdX+12, 75, birdX+24, 90); ctx.quadraticCurveTo(birdX+12, 105, birdX, 90); ctx.fill();
+            ctx.fillStyle = '#ffcc80';
+            ctx.beginPath(); ctx.arc(180, 260, 14, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#1565c0'; ctx.fillRect(174, 272, 12, 25);
+            ctx.fillStyle = '#4e342e'; ctx.fillRect(178, 295, 8, 20);
+            ctx.fillStyle = '#8d6e63'; ctx.fillRect(168, 250, 24, 8);
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(175, 255, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(185, 255, 3, 0, Math.PI*2); ctx.fill();
+            ctx.font = "bold 16px Inter";
+            ctx.fillStyle = "#fff6d5";
+            ctx.shadowBlur = 6;
+            ctx.fillText("🌱 TANAMANKU.ID 🌱", 100, 370);
+            if(progress < 1) requestAnimationFrame(drawIntro);
+            else finishIntro();
+        }
+        function finishIntro() {
+            stopIntroMusic();
+            const introDiv = document.getElementById('introOverlay');
+            introDiv.classList.add('fade-out-intro');
+            setTimeout(() => {
+                introDiv.style.display = 'none';
+                document.getElementById('app').style.opacity = '1';
+            }, 600);
+        }
+        requestAnimationFrame((t) => { startTime = t; drawIntro(t); });
+    }
+    
+    // Musik latar tombol
+    let bgMusicCtx = null, bgMusicInterval = null, bgMusicPlaying = false;
+    function playLaguJawaBg() {
+        if (!bgMusicCtx) bgMusicCtx = new AudioContext();
+        if (bgMusicCtx.state === 'suspended') bgMusicCtx.resume();
+        const now = bgMusicCtx.currentTime;
+        const notes = [392, 440, 392, 330, 392, 440, 392, 294, 330, 392, 330, 294, 262, 294, 330, 294, 262];
+        const durations = [0.4,0.4,0.4,0.6,0.4,0.4,0.4,0.6,0.4,0.4,0.4,0.4,0.6,0.4,0.4,0.4,0.8];
+        let time = now;
+        notes.forEach((f, i) => {
+            const osc = bgMusicCtx.createOscillator();
+            const gain = bgMusicCtx.createGain();
+            osc.connect(gain);
+            gain.connect(bgMusicCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = f;
+            gain.gain.setValueAtTime(0.12, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + durations[i]);
+            osc.start(time);
+            osc.stop(time + durations[i]);
+            time += durations[i];
+        });
+    }
+    function startBgMusic() {
+        if (bgMusicInterval) clearInterval(bgMusicInterval);
+        playLaguJawaBg();
+        bgMusicInterval = setInterval(() => { if(bgMusicPlaying) playLaguJawaBg(); }, 5500);
+        if(bgMusicCtx) bgMusicCtx.resume();
+    }
+    function stopBgMusic() {
+        if(bgMusicInterval) clearInterval(bgMusicInterval);
+        if(bgMusicCtx) bgMusicCtx.close();
+        bgMusicCtx = null;
+        bgMusicPlaying = false;
+    }
+    document.getElementById("musicToggleBtn")?.addEventListener("click", () => {
+        if (!bgMusicPlaying) {
+            bgMusicPlaying = true;
+            startBgMusic();
+            document.getElementById("musicToggleBtn").classList.add("playing");
+        } else {
+            bgMusicPlaying = false;
+            stopBgMusic();
+            document.getElementById("musicToggleBtn").classList.remove("playing");
+        }
+    });
+    
+    loadData();
+    renderHome();
+    showPage("home");
+    initDarkMode();
+    startIntro();
+    if (Notification.permission === "default") Notification.requestPermission();
+    document.body.addEventListener('click',()=>{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }, { once: true });
+</script>
+</body>
+</html>
+
